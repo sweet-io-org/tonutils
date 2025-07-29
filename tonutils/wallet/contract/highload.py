@@ -143,7 +143,7 @@ class HighloadWalletV3(Wallet):
             public_key: bytes,
             private_key: bytes,
             wallet_id: int = 698983191,
-            timeout: int = 60 * 5,
+            timeout: int = 60 * 20,
             **kwargs,
     ) -> None:
         self.timeout = timeout
