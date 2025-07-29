@@ -378,7 +378,7 @@ class HighloadWalletV3Data(TlbScheme):
             self,
             public_key: bytes,
             wallet_id: int = 698983191,
-            timeout: int = 60 * 5,
+            timeout: int = 60 * 20,
             last_cleaned: int = 0,
     ) -> None:
         self.public_key = public_key

@@ -146,7 +146,7 @@ class HighloadWalletV3(Wallet):
             timeout: int = 60 * 20,
             **kwargs,
     ) -> None:
-        self.timeout = timeout
+        self.timeout = 60 * 20 #= timeout
         super().__init__(client, public_key, private_key, wallet_id, **kwargs)
 
     @classmethod
