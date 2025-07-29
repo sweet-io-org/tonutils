@@ -154,7 +154,7 @@ class HighloadWalletV3(Wallet):
             cls,
             public_key: bytes,
             wallet_id: int = 698983191,
-            timeout: int = 60 * 5,
+            timeout: int = 60 * 20,
     ) -> HighloadWalletV3Data:
         return HighloadWalletV3Data(public_key, wallet_id, timeout)
 
