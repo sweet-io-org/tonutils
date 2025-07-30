@@ -84,7 +84,6 @@ class CollectionStandardBase(Collection):
             .store_ref(
                 begin_cell()
                 .store_address(owner_address)
-                .store_ref(content.serialize())
                 .end_cell()
             )
             .end_cell()
