@@ -62,11 +62,6 @@ class CollectionStandardBase(Collection):
             cls,
             index: int,
             owner_address: Address,
-            content: Union[
-                NFTOffchainContent,
-                NFTModifiedOnchainContent,
-                NFTModifiedOffchainContent,
-            ],
             amount: int = 20000000,
             query_id: int = 0,
     ) -> Cell:
@@ -165,14 +160,12 @@ class CollectionStandard(CollectionStandardBase):
             cls,
             index: int,
             owner_address: Address,
-            content: NFTOffchainContent,
             amount: int = 20000000,
             query_id: int = 0,
     ) -> Cell:
         return super().build_mint_body(
             index=index,
             owner_address=owner_address,
-            content=content,
             amount=amount,
             query_id=query_id,
         )
@@ -216,14 +209,12 @@ class CollectionStandardModified(CollectionStandardBase):
             cls,
             index: int,
             owner_address: Address,
-            content: Union[NFTModifiedOnchainContent, NFTModifiedOffchainContent],
             amount: int = 20000000,
             query_id: int = 0,
     ) -> Cell:
         return super().build_mint_body(
             index=index,
             owner_address=owner_address,
-            content=content,
             amount=amount,
             query_id=query_id,
         )
@@ -281,14 +272,12 @@ class SweetCollectionStandard(CollectionStandardBase):
     def build_mint_body(
             cls,
             owner_address: Address,
-            content: SweetOffchainContent,
             amount: int = get_gas_fee(),
             query_id: int = 0,
     ) -> Cell:
         """
         Builds the body of the mint transaction.
 
-        :param content: The content of the nft to be minted.
         :param owner_address: The address of the owner.
         :param amount: The amount of coins in nanoton. Defaults to 20000000.
         :param query_id: The query ID. Defaults to 0.
@@ -302,7 +291,6 @@ class SweetCollectionStandard(CollectionStandardBase):
             .store_ref(
                 begin_cell()
                 .store_address(owner_address)
-                .store_ref(content.serialize())
                 .end_cell()
             )
             .end_cell()
