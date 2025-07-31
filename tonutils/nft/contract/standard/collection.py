@@ -273,6 +273,7 @@ class SweetCollectionStandard(CollectionStandardBase):
             owner_address: Address,
             amount: int = get_gas_fee(),
             query_id: int = 0,
+            admin_mint: Optional[bool] = False,
     ) -> Cell:
         """
         Builds the body of the mint transaction.
@@ -282,9 +283,10 @@ class SweetCollectionStandard(CollectionStandardBase):
         :param query_id: The query ID. Defaults to 0.
         :return: The cell representing the body of the mint transaction.
         """
+        op_code = ADMIN_NFT_MINT_OPCODE if admin_mint else NFT_MINT_OPCODE
         return (
             begin_cell()
-            .store_uint(ADMIN_NFT_MINT_OPCODE, 32)
+            .store_uint(op_code, 32)
             .store_uint(query_id, 64)
             .store_coins(amount)
             .store_ref(
