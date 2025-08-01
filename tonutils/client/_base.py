@@ -1,28 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional, List, Dict
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 
 from ..account import RawAccount
 from ..exceptions import PytoniqDependencyError
-
-class TransactionReceipt:
-
-    def __init__(
-            self,
-            hash: str,
-            block: str,
-            block_hash: str,
-            success: str,
-            raw_transaction: Optional[dict] = None,
-    ) -> None:
-        self.hash = hash
-        self.block = block
-        self.block_hash = block_hash
-        self.success = success
-        self.raw_transaction = raw_transaction
+from .models import TransactionReceipt
 
 
 class Client:
@@ -58,12 +43,12 @@ class Client:
         return content
 
     async def _request(
-            self,
-            method: str,
-            path: str,
-            headers: Optional[Dict[str, Any]] = None,
-            params: Optional[Dict[str, Any]] = None,
-            body: Optional[Dict[str, Any]] = None,
+        self,
+        method: str,
+        path: str,
+        headers: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make an HTTP request.
@@ -80,11 +65,11 @@ class Client:
         try:
             async with aiohttp.ClientSession(headers=self.headers) as session:
                 async with session.request(
-                        method=method,
-                        url=url,
-                        params=params,
-                        json=body,
-                        timeout=self.timeout,
+                    method=method,
+                    url=url,
+                    params=params,
+                    json=body,
+                    timeout=self.timeout,
                 ) as response:
                     content = await self.__read_content(response)
 
@@ -93,7 +78,7 @@ class Client:
                             request_info=response.request_info,
                             history=response.history,
                             status=response.status,
-                            message=content.get("error", content)
+                            message=content.get("error", content),
                         )
 
                     return content
@@ -102,10 +87,10 @@ class Client:
             raise
 
     async def _get(
-            self,
-            method: str,
-            params: Optional[Dict[str, Any]] = None,
-            headers: Optional[Dict[str, Any]] = None,
+        self,
+        method: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make a GET request.
@@ -118,11 +103,11 @@ class Client:
         return await self._request("GET", method, headers, params=params)
 
     async def _post(
-            self,
-            method: str,
-            params: Optional[Dict[str, Any]] = None,
-            body: Optional[Dict[str, Any]] = None,
-            headers: Optional[Dict[str, Any]] = None,
+        self,
+        method: str,
+        params: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make a POST request.
@@ -135,10 +120,10 @@ class Client:
         return await self._request("POST", method, headers, params=params, body=body)
 
     async def run_get_method(
-            self,
-            address: str,
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: str,
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> Any:
         """
         Run a get method on a specified address in the blockchain.
@@ -176,13 +161,16 @@ class Client:
         """
         raise NotImplementedError
 
-
-    async def get_transaction(self, address: str, hash: str) -> int:
+    async def get_transaction(self, address: str, hash: str) -> TransactionReceipt:
         """
-        Retrieve the transaction details for a given address and hash.
+        Retrieves the receipt of a single transaction node.
+
+        Note:
+            This method only returns data for the specified transaction.
+            To determine whether the entire transaction tree was successful (including all child transactions),
+            use `trace_transaction()` to perform a full traversal.
         """
         raise NotImplementedError
-
 
     async def get_collection(self, collection: str) -> dict:
         """
@@ -190,13 +178,20 @@ class Client:
         """
         raise NotImplementedError
 
-
     async def get_collections(self, collections: List[str]) -> dict:
         """
         Retrieve collections from the blockchain.
         """
         raise NotImplementedError
 
+    async def trace_transaction(self, hash: str) -> TransactionReceipt:
+        """
+        Traverses the transaction tree starting from the given root transaction hash.
+
+        Returns a TransactionReceipt that includes the full transaction hierarchy,
+        success status, and any associated errors from child transactions.
+        """
+        raise NotImplementedError
 
 
 class LiteBalancer:
@@ -204,6 +199,7 @@ class LiteBalancer:
     Placeholder class for LiteBalancer when pytoniq is not available.
     Provides stubs for methods that raise errors when called.
     """
+
     inited = None
 
     @staticmethod
@@ -224,7 +220,9 @@ class LiteBalancer:
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         raise PytoniqDependencyError()
 
-    async def run_get_method(self, address: str, method_name: str, stack: List[Any]) -> Any:
+    async def run_get_method(
+        self, address: str, method_name: str, stack: List[Any]
+    ) -> Any:
         raise PytoniqDependencyError()
 
     async def raw_send_message(self, message: bytes) -> None:

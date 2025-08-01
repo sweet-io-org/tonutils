@@ -8,6 +8,7 @@ from pytoniq_core import Address, SimpleAccount
 
 from ..account import AccountStatus, RawAccount
 from ..exceptions import PytoniqDependencyError
+from .models import TransactionReceipt
 
 try:
     # noinspection PyPackageRequirements
@@ -45,10 +46,10 @@ class LiteserverClient(Client):
     """
 
     def __init__(
-            self,
-            config: Optional[Dict[str, Any]] = None,
-            is_testnet: bool = False,
-            trust_level: int = 2,
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        is_testnet: bool = False,
+        trust_level: int = 2,
     ) -> None:
         """
         Initialize the LiteserverClient.
@@ -71,7 +72,9 @@ class LiteserverClient(Client):
         self.client = self._get_lite_balancer(config, is_testnet, trust_level)
 
     @staticmethod
-    def _get_lite_balancer(config: Optional[Dict[str, Any]], is_testnet: bool, trust_level: int) -> LiteBalancer:
+    def _get_lite_balancer(
+        config: Optional[Dict[str, Any]], is_testnet: bool, trust_level: int
+    ) -> LiteBalancer:
         if config:
             return LiteBalancer.from_config(config=config, trust_level=trust_level)
         elif is_testnet:
@@ -88,10 +91,10 @@ class LiteserverClient(Client):
 
     @require_pytoniq
     async def run_get_method(
-            self,
-            address: str,
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: str,
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> Any:
         return await self.client.run_get_method(address, method_name, stack or [])
 
@@ -107,11 +110,19 @@ class LiteserverClient(Client):
 
         status = (
             "uninit"
-            if simple_account.state.type_ == "uninitialized" else
-            simple_account.state.type_
+            if simple_account.state.type_ == "uninitialized"
+            else simple_account.state.type_
         )
-        code = simple_account.state.state_init.code if simple_account.state.state_init else None
-        data = simple_account.state.state_init.data if simple_account.state.state_init else None
+        code = (
+            simple_account.state.state_init.code
+            if simple_account.state.state_init
+            else None
+        )
+        data = (
+            simple_account.state.state_init.data
+            if simple_account.state.state_init
+            else None
+        )
         _lt, _lt_hash = shard_account.last_trans_lt, shard_account.last_trans_hash
         lt, lt_hash = int(_lt) if _lt else None, _lt_hash.hex() if _lt_hash else None
 
@@ -129,7 +140,7 @@ class LiteserverClient(Client):
         raw_account = await self.get_raw_account(address)
         return raw_account.balance
 
-    async def get_transaction(self, address: str, hash: str) -> int:
+    async def get_transaction(self, address: str, hash: str) -> TransactionReceipt:
         """
         Retrieve the transaction details for a given address and hash.
         """
@@ -144,5 +155,14 @@ class LiteserverClient(Client):
     async def get_collections(self, collections: List[str]) -> dict:
         """
         Retrieve collections from the blockchain.
+        """
+        raise NotImplementedError
+
+    async def trace_transaction(self, hash: str) -> TransactionReceipt:
+        """
+        Traverses the transaction tree starting from the given root transaction hash.
+
+        Returns a TransactionReceipt that includes the full transaction hierarchy,
+        success status, and any associated errors from child transactions.
         """
         raise NotImplementedError

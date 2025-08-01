@@ -3,9 +3,10 @@ from typing import Any, List, Optional
 
 from pytoniq_core import Cell
 
-from ._base import Client
 from ..account import AccountStatus, RawAccount
 from ..utils import boc_to_base64_string
+from ._base import Client
+from .models import TransactionReceipt
 
 
 class ToncenterClient(Client):
@@ -17,10 +18,10 @@ class ToncenterClient(Client):
     """
 
     def __init__(
-            self,
-            api_key: Optional[str] = None,
-            is_testnet: Optional[bool] = False,
-            base_url: Optional[str] = None,
+        self,
+        api_key: Optional[str] = None,
+        is_testnet: Optional[bool] = False,
+        base_url: Optional[str] = None,
     ) -> None:
         """
         Initialize the ToncenterClient.
@@ -32,15 +33,19 @@ class ToncenterClient(Client):
             the default public URL will be used. You can specify your own API URL if needed.
         """
         if base_url is None:
-            base_url = "https://toncenter.com" if not is_testnet else "https://testnet.toncenter.com"
+            base_url = (
+                "https://toncenter.com"
+                if not is_testnet
+                else "https://testnet.toncenter.com"
+            )
         headers = {"X-Api-Key": api_key} if api_key else {}
         super().__init__(base_url=base_url, headers=headers, is_testnet=is_testnet)
 
     async def run_get_method(
-            self,
-            address: str,
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: str,
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> Any:
         method = f"/api/v3/runGetMethod"
         body = {
@@ -48,8 +53,8 @@ class ToncenterClient(Client):
             "method": method_name,
             "stack": [
                 {"type": "num", "value": str(v)}
-                if isinstance(v, int) else
-                {"type": "slice", "value": v}
+                if isinstance(v, int)
+                else {"type": "slice", "value": v}
                 for v in (stack or [])
             ],
         }
@@ -70,8 +75,13 @@ class ToncenterClient(Client):
         code_cell = Cell.one_from_boc(code) if code else None
         data = result.get("data")
         data_cell = Cell.one_from_boc(data) if data else None
-        _lt, _lt_hash = result.get("last_transaction_lt"), result.get("last_transaction_hash")
-        lt, lt_hash = int(_lt) if _lt else None, base64.b64decode(_lt_hash).hex() if _lt_hash else None
+        _lt, _lt_hash = result.get("last_transaction_lt"), result.get(
+            "last_transaction_hash"
+        )
+        lt, lt_hash = (
+            int(_lt) if _lt else None,
+            base64.b64decode(_lt_hash).hex() if _lt_hash else None,
+        )
 
         return RawAccount(
             balance=int(result.get("balance", 0)),
@@ -87,7 +97,7 @@ class ToncenterClient(Client):
 
         return raw_account.balance
 
-    async def get_transaction(self, address: str, hash: str) -> int:
+    async def get_transaction(self, address: str, hash: str) -> TransactionReceipt:
         """
         Retrieve the transaction details for a given address and hash.
         """
@@ -102,5 +112,14 @@ class ToncenterClient(Client):
     async def get_collections(self, collections: List[str]) -> dict:
         """
         Retrieve collections from the blockchain.
+        """
+        raise NotImplementedError
+
+    async def trace_transaction(self, hash: str) -> TransactionReceipt:
+        """
+        Traverses the transaction tree starting from the given root transaction hash.
+
+        Returns a TransactionReceipt that includes the full transaction hierarchy,
+        success status, and any associated errors from child transactions.
         """
         raise NotImplementedError
