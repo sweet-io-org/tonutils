@@ -2,8 +2,9 @@ from typing import Any, List, Optional
 
 from pytoniq_core import Cell
 
-from tonutils.client._base import Client, TransactionReceipt
-from tonutils.account import AccountStatus, RawAccount
+from ..account import AccountStatus, RawAccount
+from ._base import Client
+from .models import Transaction, TransactionReceipt
 
 
 class TonapiClient(Client):
@@ -15,10 +16,10 @@ class TonapiClient(Client):
     """
 
     def __init__(
-            self,
-            api_key: str,
-            is_testnet: Optional[bool] = False,
-            base_url: Optional[str] = None,
+        self,
+        api_key: str,
+        is_testnet: Optional[bool] = False,
+        base_url: Optional[str] = None,
     ) -> None:
         """
         Initialize the TonapiClient.
@@ -30,21 +31,23 @@ class TonapiClient(Client):
             the default public URL will be used. You can specify your own API URL if needed.
         """
         if base_url is None:
-            base_url = "https://tonapi.io" if not is_testnet else "https://testnet.tonapi.io"
+            base_url = (
+                "https://tonapi.io" if not is_testnet else "https://testnet.tonapi.io"
+            )
         headers = {"Authorization": f"Bearer {api_key}"}
 
         super().__init__(base_url=base_url, headers=headers, is_testnet=is_testnet)
 
     async def run_get_method(
-            self,
-            address: str,
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: str,
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> Any:
         method = f"/v2/blockchain/accounts/{address}/methods/{method_name}"
 
         if stack:
-            query_params = '&'.join(f"args={arg}" for arg in stack)
+            query_params = "&".join(f"args={arg}" for arg in stack)
             method = f"{method}?{query_params}"
 
         return await self._get(method=method)
@@ -62,7 +65,9 @@ class TonapiClient(Client):
         code_cell = Cell.one_from_boc(code) if code else None
         data = result.get("data")
         data_cell = Cell.one_from_boc(data) if data else None
-        _lt, _lt_hash = result.get("last_transaction_lt"), result.get("last_transaction_hash")
+        _lt, _lt_hash = result.get("last_transaction_lt"), result.get(
+            "last_transaction_hash"
+        )
         lt, lt_hash = int(_lt) if _lt else None, _lt_hash if _lt_hash else None
 
         return RawAccount(
@@ -90,26 +95,19 @@ class TonapiClient(Client):
             return block.get("root_hash")
         return None
 
-
-    async def get_transaction(self, address: str, hash: str) -> None:
+    async def get_transaction(self, address: str, hash: str) -> TransactionReceipt:
         method = f"/v2/blockchain/transactions/{hash}"
-        txn = None
         try:
-            txn = await self._get(method=method)
+            result = await self._get(method=method)
         except Exception as e:
             if "not found" in str(e):
                 return None
-        if txn:
-            block_hash = await self.get_block_hash(txn.get("block"))
+        if result:
+            root_txn = Transaction.from_ton_api_trace(result)
+            block_hash = await self.get_block_hash(root_txn.block)
+            return TransactionReceipt.from_transaction(root_txn, block_hash=block_hash)
         else:
             return None
-        return TransactionReceipt(
-            hash=txn.get("hash"),
-            block=txn.get("block"),
-            block_hash=block_hash,
-            success=txn.get("success"),
-            raw_transaction=txn.get("in_msg"),
-        )
 
     async def get_collection(self, collection: str) -> dict:
         """
@@ -125,3 +123,17 @@ class TonapiClient(Client):
         method = "/v2/nfts/collections/_bulk"
         result = await self._post(method=method, body={"account_ids": collections})
         return result["nft_collections"]
+
+    async def trace_transaction(self, txn_hash: str) -> TransactionReceipt:
+        method = f"/v2/traces/{txn_hash}"
+        try:
+            result = await self._get(method=method)
+        except Exception as e:
+            if "not found" in str(e):
+                return None
+        if result:
+            root_txn = Transaction.from_ton_api_trace(result)
+            block_hash = await self.get_block_hash(root_txn.block)
+            return TransactionReceipt.from_transaction(root_txn, block_hash=block_hash)
+        else:
+            return None

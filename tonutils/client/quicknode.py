@@ -2,16 +2,17 @@ from typing import Any, List, Optional
 
 from pytoniq_core import Cell
 
-from tonutils.client._base import Client, TransactionReceipt
-from tonutils.account import AccountStatus, RawAccount
+from ..account import AccountStatus, RawAccount
+from ._base import Client
+from .models import TransactionReceipt
 
 
 class QuickNodeClient(Client):
     def __init__(
-            self,
-            api_key: str,
-            is_testnet: Optional[bool] = False,
-            base_url: Optional[str] = None,
+        self,
+        api_key: str,
+        is_testnet: Optional[bool] = False,
+        base_url: Optional[str] = None,
     ) -> None:
         """
         Initialize the QuickNodeClient.
@@ -24,23 +25,23 @@ class QuickNodeClient(Client):
         super().__init__(base_url=base_url, headers=headers, is_testnet=is_testnet)
 
     async def run_get_method(
-            self,
-            address: str,
-            method_name: str,
-            stack: Optional[List[Any]] = None,
+        self,
+        address: str,
+        method_name: str,
+        stack: Optional[List[Any]] = None,
     ) -> Any:
         method = f"/{method_name}?address={address}"
         if stack:
-            query_params = '&'.join(f"{key}={value}" for key, value in zip(stack[::2], stack[1::2]))
+            query_params = "&".join(
+                f"{key}={value}" for key, value in zip(stack[::2], stack[1::2])
+            )
             method = f"{method}?{query_params}"
         return await self._get(method=method)
-
 
     async def send_message(self, boc: str) -> None:
         method = "/sendBocReturnHash"
 
         await self._post(method=method, body={"boc": boc})
-
 
     async def get_raw_account(self, address: str) -> RawAccount:
         method = f"/getAddressInformation?address={address}"
@@ -53,7 +54,9 @@ class QuickNodeClient(Client):
         data = result.get("data")
         data_cell = Cell.one_from_boc(data) if data else None
         last_transaction = result.get("last_transaction_id")
-        _lt, _lt_hash = last_transaction.get("last_transaction_lt"), last_transaction.get("hash")
+        _lt, _lt_hash = last_transaction.get(
+            "last_transaction_lt"
+        ), last_transaction.get("hash")
         lt, lt_hash = int(_lt) if _lt else None, _lt_hash if _lt_hash else None
 
         return RawAccount(
@@ -70,10 +73,9 @@ class QuickNodeClient(Client):
 
         return raw_account.balance
 
-    async def get_transaction(self, address: str, hash: str) -> None:
+    async def get_transaction(self, address: str, hash: str) -> TransactionReceipt:
         method = "/getTransactions"
         await self.run_get_method(self, address, method, ["hash", hash])
-
 
     async def get_collection(self, collection: str) -> dict:
         """
@@ -87,3 +89,11 @@ class QuickNodeClient(Client):
         """
         raise NotImplementedError
 
+    async def trace_transaction(self, hash: str) -> TransactionReceipt:
+        """
+        Traverses the transaction tree starting from the given root transaction hash.
+
+        Returns a TransactionReceipt that includes the full transaction hierarchy,
+        success status, and any associated errors from child transactions.
+        """
+        raise NotImplementedError
