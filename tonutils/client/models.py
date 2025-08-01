@@ -143,14 +143,13 @@ class Transaction:
         raw_success = tx_data.get("success", False)
         raw_aborted = tx_data.get("aborted", False)  # assuming aborted field may exist
 
-        # Per your logic, if success is False or aborted True => treat as failed
         success = raw_success and not raw_aborted
 
         compute_phase = parse_phase(tx_data.get("compute_phase"))
         action_phase = parse_phase(tx_data.get("action_phase"))
 
         error = None
-        # Step 1: check compute_phase skipped
+        # check compute_phase skipped
         if compute_phase.skipped:
             error = (
                 compute_phase.skip_reason.lower().replace(" ", "_")
