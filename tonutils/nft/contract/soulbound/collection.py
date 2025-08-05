@@ -319,53 +319,58 @@ class SweetCollectionSoulbound(CollectionSoulboundBase):
 
     @classmethod
     def build_mint_body(
-        cls,
-        owner_address: Address,
-        content: SweetOffchainContent,
-        amount: int = get_gas_fee(),
-        query_id: int = 0,
+            cls,
+            owner_address: Address,
+            user_id: int,
+            amount: int = get_gas_fee(),
+            query_id: int = 0,
     ) -> Cell:
         """
         Builds the body of the mint transaction.
 
-        :param content: The content of the nft to be minted.
         :param owner_address: The address of the owner.
+        :param user_id: The user ID to associate with the token
         :param amount: The amount of coins in nanoton. Defaults to 20000000.
         :param query_id: The query ID. Defaults to 0.
         :return: The cell representing the body of the mint transaction.
         """
         return (
             begin_cell()
-            .store_uint(NFT_MINT_OPCODE, 32)
+            .store_uint(1, 32)
             .store_uint(query_id, 64)
             .store_coins(amount)
-            .store_ref(begin_cell().store_address(owner_address).end_cell())
+            .store_ref(
+                begin_cell()
+                .store_address(owner_address)
+                .store_uint(user_id, 64)
+                .end_cell()
+            )
             .end_cell()
         )
 
     @classmethod
     def build_batch_mint_body(
         cls,
-        addresses: List[Address],
+        tokendata: List[Tuple[Address,int]],
         amount_per_one: int = 20000000,
         query_id: int = 0,
     ) -> Cell:
-
         items_dict = HashMap(key_size=64)
-
-        for i, owner_address in enumerate(addresses, start=0):
+        for i, (owner_address, user_id) in enumerate(tokendata, start=0):
             items_dict.set_int_key(
                 i,
                 begin_cell()
                 .store_ref(
                     begin_cell()
-                    .store_ref(begin_cell().store_address(owner_address).end_cell())
+                    .store_ref(begin_cell()
+                        .store_address(owner_address)
+                        .store_uint(user_id,64)
+                        .end_cell())
                     .store_coins(amount_per_one)
                     .end_cell()
                 )
                 .end_cell(),
             )
-
         return (
             begin_cell()
             .store_uint(BATCH_NFT_MINT_OPCODE, 32)
