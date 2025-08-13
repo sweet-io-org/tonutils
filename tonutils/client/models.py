@@ -126,7 +126,17 @@ class Transaction:
                     success=False,
                     skipped=True,
                     skip_reason=phase.get("skip_reason", "skipped"),
-                    exit_code=None,
+                    exit_code=phase.get("exit_code"),
+                )
+            if (
+                phase.get("skipped_actions", 0) > 0
+                and phase.get("total_actions", 0) > 0
+            ):
+                return PhaseResult(
+                    success=False,
+                    skipped=True,
+                    skip_reason="action_phase_skipped",
+                    exit_code=phase.get("result_code"),
                 )
             if "exit_code" in phase:
                 exit_code = phase.get("exit_code")
@@ -156,6 +166,8 @@ class Transaction:
                 if compute_phase.skip_reason
                 else "compute_phase_skipped"
             )
+        elif action_phase.skipped and action_phase.exit_code in (0, 1):
+            error = action_phase.skip_reason
         else:
             # compute_phase ran: check success and exit_code
             if not compute_phase.success:
